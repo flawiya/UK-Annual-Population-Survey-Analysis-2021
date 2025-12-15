@@ -22,4 +22,4 @@
 *   `analysis_script.qmd` - The raw Quarto/R code.
 
 ---
-*Note: This analysis uses the APS 2021 dataset.*
+*Note: Data source: APS 2021 (Available via UK Data Service). Data not included in repo for privacy/licensing reasons*
