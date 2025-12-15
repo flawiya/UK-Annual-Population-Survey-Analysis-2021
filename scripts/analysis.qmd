@@ -1,0 +1,516 @@
+---
+title: "Descriptive and Inferential Analysis of Transport Habits and Benefit Status: Evidence from the APS 2021"
+author: Flawiya Shirish More
+format: 
+  gfm:                   # gfm = GitHub Flavored Markdown
+    preview-mode: raw    # Keeps the raw code visible
+    toc: true            # Adds a Table of Contents
+editor: visual
+---
+
+```{r}
+#| echo: false
+#| warning: false
+if (!requireNamespace("tinytex", quietly = TRUE)) {
+  options(repos = c(CRAN = "https://cran.r-project.org"))
+  install.packages("tinytex")
+  tinytex::install_tinytex()
+}
+```
+
+```{r}
+#| warning: false
+library(tidyverse)  # Data wrangling and plotting
+library(gdslStats)  # Advanced statistical functions and estimations
+library(scales)     # Data visualization scales and formatting
+library(patchwork)  # Combining multiple ggplot2 plots into layouts
+library(ggplot2)    # Creating elegant data visualizations
+library(moments)    # Calculating skewness and kurtosis
+library(survey)     # Survey analysis and chi-square tests
+library(devtools)   # Package development and management tools
+library(forcats)
+library(stringr)
+library(gt)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+APS <- "C:\\Users\\flavi\\Downloads\\envs450\\Assignment 1\\APS_2021.RData"
+```
+
+```{r}
+load(APS)
+```
+
+```{r}
+print("Inspecting the Continuous variable: Commute_Time")
+meta_data$Commute_Time$value_labels
+```
+
+```{r}
+# Creating a new variable by excluding the invalid values:
+APS$Commute_Time_Valid <- replace(APS$Commute_Time, 
+                                  which(APS$Commute_Time %in% c(-8, -9, 0)), NA)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+meta_data$Commute_Method$levels
+```
+
+```{r}
+# Creating new variable by removing invalid responses:
+APS$Commute_Method_Valid <- fct_na_level_to_value(APS$Commute_Method,extra_levels = c("Does not apply", "No answer"))
+```
+
+```{r}
+skewness(APS$Commute_Time_Valid, na.rm = TRUE)
+```
+
+```{r}
+median(APS$Commute_Time_Valid,na.rm=TRUE)
+```
+
+```{r}
+IQR(APS$Commute_Time_Valid, na.rm=TRUE)
+```
+
+```{r}
+ggplot(data = subset(APS, !is.na(Commute_Time_Valid)), 
+       aes(x = Commute_Time_Valid)) +
+  geom_histogram(binwidth = 5, fill = "#56B4E9", color = "white") +
+  labs(
+    x = "Commute Time (mins)",
+    y = "Count",
+    caption = "Figure 1. Distribution of Valid Commute Time"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(hjust = 0.5), 
+    plot.title = element_text(size = 15, face = "bold", hjust = 0.5)
+  )
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# Calculate frequency of each commute method excluding NA values
+commute_method_list <- table(na.omit(APS$Commute_Method_Valid))
+```
+
+```{r}
+# Find the category with maximum frequency
+freq_commute_method <- names(commute_method_list)[which.max(
+  commute_method_list)]
+print(paste("Most frequent Commute_Method:", freq_commute_method))
+```
+
+```{r}
+#| echo: false
+#| warning: false
+SRDI <- function(x, na.rm=TRUE) {
+# Check that the variable type
+  if ( !is.factor(x) & !is.character(x) ) {
+    stop( "Error: IQV can only be calculated for categorical
+          variables" )
+  }
+  
+# Handle missing values
+  if (na.rm==TRUE) {
+# Remove NA values if requested
+    x <- x[!is.na(x)]}
+
+# Convert NA values to a separate factor level if requested 
+  if (na.rm==FALSE) {
+    x <- fct_na_value_to_level(x, level = NA)}
+
+# Ensure input is a factor for frequency calculations 
+  factor_x <- if ( !is.factor(x) ) {
+    x <- factor(x)}
+
+## Calculating SRDI
+# Calculate the number of categories (levels)
+  K <- length( levels(x) )
+
+# Finding frequency counts for each category (including empty levels)
+  f <- table(x)
+
+# Calculate squared proportions of category frequencies (Simpson index components) 
+  p_sq <- ( f/sum(f) )^2
+# Compute the Reciprocal Diversity Index (RDI)
+  RDI <- 1/sum(p_sq)
+
+# Standardize RDI to a percentage scale from 0 to 100
+# Min value of RDI = 1 ; max value = number of categories. 
+# Subtracting 1 from RDI gives range 0 to K-1
+# Dividing by the new max value (K-1) gives RDI as proportion of max value
+# Multiplying by 100 to convert into percentage
+  SRDI <- ( RDI - 1) / (K - 1) * 100
+  return(SRDI)
+}
+```
+
+```{r}
+SRDI(APS$Commute_Method_Valid, na.rm = TRUE)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+APS$Commute_Method_Valid <- fct_recode(
+  APS$Commute_Method_Valid,
+  "Underground, tram,\nlight railway" = "Underground, tram, light railway"
+)
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73",
+               "#F0E442", "#0072B2", "#D55E00",
+               "#CC79A7", "#999999", "#666666")
+ggplot(
+  data = subset(APS, !is.na(Commute_Method_Valid)),
+  aes(x = fct_infreq(Commute_Method_Valid), fill = fct_infreq(
+    Commute_Method_Valid))
+) +
+  geom_bar(color = "white", size = 0.2) +
+  coord_flip() +
+  scale_fill_manual(values = cbPalette) +
+  labs(
+    x = "Method of Commute",
+    y = "Count",
+    caption = "Figure 2. Relative frequency of different Commute Method."
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(hjust = 0.5),
+    legend.position = "none",
+    plot.title = element_text(size = 15, face = "bold", hjust = 0.5)
+  )
+```
+
+```{r}
+# Creating bins and label for Commute_Time_Valid
+time_breaks <- c(0, 15, 30, 60, Inf) # bins
+time_labels <- c("0-15 mins", "16-30 mins", "31-60 mins", "61+ mins")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# To group the continuous time according to bins
+APS$Commute_Time_Grouped <- cut(
+  APS$Commute_Time_Valid,
+  breaks = time_breaks,
+  labels = time_labels,
+  right = TRUE,          # including upper limit
+  include.lowest = TRUE  # including 0 if present
+)
+```
+
+```{r}
+table(APS$Commute_Time_Grouped) # display frequency and labels for Commute_time_Grouped
+```
+
+```{r}
+APS$Commute_Method_Grouped <- fct_collapse(APS$Commute_Method_Valid,
+"Private Transport" = c("Car or van", "Motorbike or moped", "Taxi"), 
+"Public Transport" = c("Bus or coach", "Train", "Underground, tram,\nlight railway"), "Active Transport" = 
+  c("Bicycle", "Walk"), "Others" = "Other method")
+```
+
+```{r}
+# Display frequency and labels for Commute_Method_Grouped
+table(APS$Commute_Method_Grouped)
+```
+
+```{r}
+# Create the cross-tabulation data (COLUMN percentages) ---
+Cross_tab_c <- tab(APS, Commute_Time_Grouped ~ Commute_Method_Grouped, 
+                   measure = "col_pct", na.rm = TRUE)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+Cross_tab_c <- tab(APS, Commute_Time_Grouped ~ Commute_Method_Grouped, 
+                   measure = "col_pct", na.rm = TRUE)
+names(dimnames(Cross_tab_c)) <- c("Commute_Time_Grouped", "Commute_Method_Grouped")
+
+Cross_tab_c %>%
+  as.data.frame.matrix() %>%
+  tibble::rownames_to_column(var = "Commute_Time_Grouped") %>%
+  gt() %>%
+  tab_header(title = "Table 1: Commute Time Distribution by Commuting Method") %>%
+  tab_spanner(label = "Commuting Method (Column Percent)", columns = where(is.numeric)) %>%
+  fmt_number(columns = where(is.numeric), decimals = 2) %>%
+  cols_label(Commute_Time_Grouped = "Commuting Time (minutes)") %>%
+  tab_options(table.align = "center", heading.title.font.size = "12pt")
+```
+
+```{r}
+ggplot(
+  data = subset(APS, !is.na(Commute_Time_Grouped) & !is.na(
+    Commute_Method_Grouped)),
+  aes(x = Commute_Time_Grouped, fill = Commute_Method_Grouped)
+) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(
+    values = c(
+      "Private Transport" = "#0072B2",
+      "Active Transport" = "#E69F00",
+      "Public Transport" = "#56B4E9",
+      "Others" = "#999999"
+    )
+  ) +
+  labs(
+    x = "Commuting Time (minutes)",
+    y = "Count",
+    fill = "Commuting Method",
+    caption = "Figure 3. Commuting Method by Commuting Time"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0.5, size = 9, margin = margin(t = 10))
+  )
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# Assigning the weights to new variable (using APS)
+aps_design <- svydesign(ids = ~0, data = APS, weights = ~Weight_APS)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# Rao-Scott Chi-Square test
+svychisq(~ Commute_Time_Grouped + Commute_Method_Grouped, 
+         design = subset(aps_design, !is.na(Commute_Time_Grouped) & 
+                           !is.na(Commute_Method_Grouped)))
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# --- CUSTOM FUNCTION for calculating confidence intervals ---
+ci_pct <- function(x, design, over = "row") {
+  
+  # Check that a 2-way table has been supplied
+  if (length(dim(x)) != 2) {
+    stop("Error: ci_pct() requires a 2-way table")
+  }
+  
+  # Get the names of the variables from the table
+  var_names <- names(dimnames(x))
+  
+  # Calculate CIs over rows or columns based on 'over' argument
+  if (over == "row") {
+    f <- as.formula(paste0("~", var_names[2]))
+    by_f <- as.formula(paste0("~", var_names[1]))
+  } else if (over == "col") {
+    f <- as.formula(paste0("~", var_names[1]))
+    by_f <- as.formula(paste0("~", var_names[2]))
+  } else {
+    stop("Error: 'over' must be either 'row' or 'col'")
+  }
+  
+  # Use svyby from the survey package to calculate proportions and CIs
+  ci_dat <- svyby(f, by = by_f, design = design, FUN = svymean, 
+                  na.rm = TRUE)
+  
+  # Format and return the results
+  dat <- data.frame(confint(ci_dat))
+  dat <- dat * 100
+  names(dat) <- c("LowerCI", "UpperCI")
+  dat$PointEst <- as.data.frame(ci_dat)[, 2] * 100
+  dat <- dat[, c(3, 1, 2)]
+  
+  return(dat)
+}
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# Create cross-tabulation counts
+Cross_tab_counts <- APS |>
+  subset(!is.na(Commute_Time_Grouped) & !is.na(
+    Commute_Method_Grouped)) |> tab(Commute_Time_Grouped ~ 
+                                      Commute_Method_Grouped, 
+                                    measure = "count")
+```
+
+```{r}
+# Calculate confidence intervals for column percentages using survey design
+CI_pct_raw <- ci_pct(Cross_tab_counts, design = aps_design, over = "col")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-ci-plot
+#| fig-cap: "Commuting Time Distribution within each Transport Method"
+
+# --- Load necessary libraries ---
+library(tidyverse)
+library(ggplot2)
+
+# --- Step 1: Prepare the data for plotting (only need to do this once) ---
+# This assumes CI_pct_raw is already created from the previous chunk
+plot_data <- CI_pct_raw %>%
+  tibble::rownames_to_column(var = "group") %>%
+  # Correctly separate the columns
+  tidyr::separate(group, into = c(
+    "Commute_Method_Grouped", "Commute_Time_Grouped"), sep = ":") %>%
+  # Correctly clean the new column
+  mutate(Commute_Time_Grouped = str_remove(Commute_Time_Grouped, "^Commute_Time_Grouped"))
+
+# --- Step 2: Create the final plot ---
+# The caption is now handled by the #| fig-cap: line above
+ggplot(plot_data, aes(x = Commute_Method_Grouped, y = PointEst, fill = Commute_Time_Grouped)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_errorbar(
+    aes(ymin = LowerCI, ymax = UpperCI),
+    position = position_dodge(width = 0.9),
+    width = 0.50,
+    color = "black"
+  ) +
+  scale_fill_brewer(palette = "Blues") +
+  labs(
+    x = "Commuting Method",
+    y = "Percentage of Commuters (%)",
+    caption = "Figure 4: Commuting Time Distribution within each Transport Method",
+    fill = "Commuting Time"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Creating unweighted tab
+unweighted_tab <- tab(Commute_Time_Grouped ~ Commute_Method_Grouped, 
+                      data = APS, 
+                      measure = "row_pct", na.rm=TRUE)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+unweighted_tab <- tab(Commute_Time_Grouped ~ Commute_Method_Grouped, 
+                      data = APS, measure = "row_pct", na.rm=TRUE)
+names(dimnames(unweighted_tab)) <- c("Commute_Time_Grouped", "Commute_Method_Grouped")
+
+unweighted_tab %>%
+  as.data.frame.matrix() %>%
+  tibble::rownames_to_column(var = "Commute_Time_Grouped") %>%
+  gt() %>%
+  tab_header(title = "Table 2. Unweighted Row Percentages for Commuting Time by Commuting Method") %>%
+  tab_spanner(label = "Commute Method (Percent)", columns = where(is.numeric)) %>%
+  fmt_number(columns = where(is.numeric), decimals = 2) %>%
+  tab_options(table.align = "center", heading.title.font.size = "12pt")
+```
+
+```{r}
+# Create the weighted table
+weighted_tab <- tab(Commute_Time_Grouped ~ Commute_Method_Grouped, 
+                    data = APS, 
+                    weights = Weight_APS,
+                    measure = "row_pct", na.rm=TRUE)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+weighted_tab <- tab(Commute_Time_Grouped ~ Commute_Method_Grouped, 
+                    data = APS, weights = Weight_APS, measure = "row_pct", na.rm=TRUE)
+names(dimnames(weighted_tab)) <- c("Commute_Time_Grouped", "Commute_Method_Grouped")
+
+weighted_tab %>%
+  as.data.frame.matrix() %>%
+  tibble::rownames_to_column(var = "Commute_Time_Grouped") %>%
+  gt() %>%
+  tab_header(title = "Table 3. Weighted Row Percentages for Commuting Time by Commuting Method") %>%
+  tab_spanner(label = "Commute Method (Percent)", columns = where(is.numeric)) %>%
+  fmt_number(columns = where(is.numeric), decimals = 2) %>%
+  tab_options(table.align = "center", heading.title.font.size = "12pt")
+```
+
+```{r}
+# Calculate the difference
+difference_tab <- weighted_tab - unweighted_tab
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+difference_tab <- weighted_tab - unweighted_tab
+names(dimnames(difference_tab)) <- c("Commute_Time_Grouped", "Commute_Method_Grouped")
+
+difference_tab %>%
+  as.data.frame.matrix() %>%
+  tibble::rownames_to_column(var = "Commute_Time_Grouped") %>%
+  gt() %>%
+  tab_header(title = "Table 4. Difference in Row Percentages (Weighted - Unweighted)") %>%
+  tab_spanner(label = "Difference (Percentage Points)", columns = where(is.numeric)) %>%
+  fmt_number(columns = where(is.numeric), decimals = 2, force_sign = TRUE) %>%
+  tab_options(table.align = "center", heading.title.font.size = "12pt")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+# Calculate frequency of each Benefit_Income category
+frequency <- as.data.frame(table(APS$Benefit_Income))
+
+# Calculate percentage distribution
+frequency$Percent <- round(100 * frequency$Freq / sum(frequency$Freq), 2)
+
+# Print message and frequency table separately
+print("Frequency and Percentage distribution for Benefit Income")
+print(frequency)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-benefit-facet
+ggplot(
+  data = subset(
+    APS,
+    !is.na(Commute_Time_Grouped) & !is.na(Commute_Method_Grouped)
+  ),
+  aes(x = Commute_Time_Grouped, fill = Commute_Method_Grouped)
+) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(
+    name = "Commuting Method",
+    values = c(
+      "Private Transport" = "#0072B2",
+      "Active Transport" = "#E69F00",
+      "Public Transport" = "#56B4E9",
+      "Others" = "#999999"
+    )
+  ) +
+  
+  # --- THIS IS THE CORRECTED PART ---
+  labs(
+    x = "Commuting Time (minutes)",
+    y = "Proportion",
+    caption = "Figure 5: Proportions of Commuting Method by Commute Time and Benefit Status"
+  ) +
+  # -----------------------------------
+  
+  facet_wrap(~Benefit_Income) +
+  theme_minimal() +
+theme(
+  axis.text.x = element_text(angle = 45, hjust = 1),
+  legend.position = "right",
+  plot.caption.position = "plot",
+  plot.caption = element_text(hjust = 0.5)
+)
+```
