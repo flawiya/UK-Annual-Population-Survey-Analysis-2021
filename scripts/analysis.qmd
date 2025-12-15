@@ -36,7 +36,7 @@ library(gt)
 ```{r}
 #| echo: false
 #| warning: false
-APS <- "C:\\Users\\flavi\\Downloads\\envs450\\Assignment 1\\APS_2021.RData"
+APS <- "data\\APS_2021.RData"
 ```
 
 ```{r}
