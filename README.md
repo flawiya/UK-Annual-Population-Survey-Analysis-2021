@@ -18,8 +18,8 @@
 *   **Multidimensional Analysis (3-way cross-tabulation)**
 
 ## 📂 Key Files
-*   `analysis_report.md` - The full rendered report with graphs and interpretation.
-*   `analysis_script.qmd` - The raw Quarto/R code.
+*   `git.md` - The full rendered report with graphs and interpretation.
+*   `analysis.qmd` - The raw Quarto/R code.
 
 ---
 *Note: Data source: APS 2021 (Available via UK Data Service). Data not included in repo for privacy/licensing reasons*
