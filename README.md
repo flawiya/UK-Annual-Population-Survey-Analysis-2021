@@ -23,3 +23,9 @@
 
 ---
 *Note: Data source: APS 2021 (Available via UK Data Service). Data not included in repo for privacy/licensing reasons*
+### ⚠️ Disclaimer for Students
+This repository is intended for **portfolio and educational purposes only**. 
+If you are a student currently enrolled in a similar module:
+1.  **Do not copy** this code or report for your own assignment submission.
+2.  Plagiarism detection software (e.g., Turnitin) indexes public GitHub repositories.
+3.  Using this material for academic credit is a violation of academic integrity policies.
